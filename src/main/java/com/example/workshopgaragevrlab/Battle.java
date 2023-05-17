@@ -1,5 +1,10 @@
 package com.example.workshopgaragevrlab;
 
+import javafx.animation.PauseTransition;
+import javafx.application.Platform;
+import javafx.scene.control.TextArea;
+import javafx.util.Duration;
+
 import java.util.Random;
 import java.util.Scanner;
 
@@ -8,105 +13,156 @@ public class Battle {
     private final Monster opponentMonster;
     private int currentRound;
     private Skill skill;
+    private final TextArea console; // TextArea for console-like output
+    private String userInput = "";
 
-    public Battle(Monster playerMonster, Monster opponentMonster){
-        this.opponentMonster = opponentMonster;
+    public Battle(Monster playerMonster, Monster opponentMonster, TextArea console) {
         this.playerMonster = playerMonster;
+        this.opponentMonster = opponentMonster;
+        this.console = console;
         this.currentRound = 1;
     }
 
-    public void initBattle(){
-        System.out.println("The Battle begins!");
-        System.out.println("Player's Monster: " + playerMonster.getName());
-        System.out.println("Opponent's Monster: " + opponentMonster.getName());
-        
-        while(playerMonster.isAlive() && opponentMonster.isAlive()){
-            System.out.println("\n--- Round " + currentRound + " ---");
-            
+    public void startBattle() {
+        appendText("The Battle begins!");
+        appendText("Player's Monster: " + playerMonster.getName());
+        appendText("Opponent's Monster: " + opponentMonster.getName());
+
+        while (playerMonster.isAlive() && opponentMonster.isAlive()) {
+            appendText("\n--- Round " + currentRound + " ---");
+
             playerTurn();
             if (!opponentMonster.isAlive()) break;
-            
+
             opponentTurn();
             if (!playerMonster.isAlive()) break;
-            
+
             currentRound++;
         }
-        
+
         endBattle();
     }
 
     private void endBattle() {
-        System.out.println("\nThe battle has ended!");
+        appendText("\nThe battle has ended!");
         // Determine the winner and display the result
         if (playerMonster.isAlive()) {
-            System.out.println("Player's Pokémon " + playerMonster.getName() + " wins!");
+            appendText("Player's Pokémon " + playerMonster.getName() + " wins!");
         } else {
-            System.out.println("Opponent's Pokémon " + opponentMonster.getName() + " wins!");
+            appendText("Opponent's Pokémon " + opponentMonster.getName() + " wins!");
         }
     }
 
-    public void playerTurn(){
-        System.out.println("\nPlayer's Turn:");
-
-        System.out.println("Choose an action:");
-        System.out.println("1. Attack");
-        System.out.println("2. Defends");
-        System.out.println("3. UseSkill");
+    public void playerTurn() {
+        appendText("\nPlayer's Turn:");
+        appendText("Choose an action:");
+        appendText("1. Attack");
+        appendText("2. Defend");
+        appendText("3. Use Skill");
 
         int choice = getUserInput();
 
         switch (choice) {
-            case 1 -> playerMonster.attack(opponentMonster);
-            case 2 -> playerMonster.defend();
-            case 3 -> useSkill();
-            default -> {
-                System.out.println("Invalid Selection. Try again.");
-                playerTurn();
-            }
-        }
-
-        System.out.println("Player's Monster: "+ playerMonster.getName() + " (HP: " + playerMonster.getHp() + "/" + playerMonster.getHpMax());
-
-    }
-
-    public void useSkill(){
-        System.out.println("Choose a Skill:");
-        System.out.println("1. Ember");
-        System.out.println("2. WaterSplash");
-        System.out.println("3. CutterLeaf");
-
-        int choice = getUserInput();
-
-        switch (choice) {
-            case 1 -> skill.ember(playerMonster);
-            case 2 -> skill.waterSplash(playerMonster);
-            case 3 -> skill.cutterLeafs(playerMonster);
-            default -> {
-                System.out.println("Invalid Selection. Try again.");
+            case 1:
+                playerMonster.attack(opponentMonster);
+                appendText("Player's Monster: " + playerMonster.getName() + " (HP: " + playerMonster.getHp() + "/" + playerMonster.getHpMax() + ")");
+                break;
+            case 2:
+                playerMonster.defend();
+                appendText("Player's Monster: " + playerMonster.getName() + " is defending.");
+                break;
+            case 3:
                 useSkill();
-            }
+                break;
+            default:
+                appendText("Invalid Selection. Try again.");
+                playerTurn();
+                break;
         }
+    }
+
+    public void useSkill() {
+        appendText("Choose a Skill:");
+        appendText("1. Ember");
+        appendText("2. Water Splash");
+        appendText("3. Cutter Leaf");
+
+        getUserInput();
+    }
+
+    public void opponentTurn() {
+        appendText("\nOpponent's Turn:");
+
+        Random rdm = new Random();
+        int ai = rdm.nextInt(1, 4);
+
+        switch (ai) {
+            case 1:
+                opponentMonster.attack(playerMonster);
+                break;
+            case 2:
+                opponentMonster.defend();
+                break;
+            case 3:
+                appendText("Missed attack.");
+                break;
+            default:
+                break;
+        }
+
+        appendText("Monster: " + opponentMonster.getName() + " (HP: " + opponentMonster.getHp() + "/" + opponentMonster.getHpMax() + ")");
+
+        // Wait for a specific event before continuing
+        waitForPlayerTurn();
+    }
+
+    private void waitForPlayerTurn() {
+        // Disable the input until player's turn starts
+        console.setEditable(false);
+
+        // Enable the input after a delay to allow the player to read the opponent's action
+        PauseTransition delay = new PauseTransition(Duration.seconds(2)); // Adjust the delay duration as needed
+        delay.setOnFinished(event -> console.setEditable(true));
+        delay.play();
     }
 
     private int getUserInput() {
         Scanner scanner = new Scanner(System.in);
-        return scanner.nextInt();
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // Consume the newline character
+        return choice;
     }
 
-    public void opponentTurn(){
-        System.out.println("\nOpponent's Turn:");
-        Random rdm = new Random();
-        int ai = rdm.nextInt(1,4);
-        if (ai == 1){
-            opponentMonster.attack(playerMonster);
-        }
-        if (ai == 2){
-            opponentMonster.defend();
-        }
-        if (ai == 3){
-            System.out.println("Miss attack.");
-        }
-        System.out.println("Monster: "+ opponentMonster.getName() + " (HP: " + opponentMonster.getHp() + "/" + opponentMonster.getHpMax());
 
+    private void processUserInput(String input) {
+        int choice;
+        try {
+            choice = Integer.parseInt(input);
+            switch (choice) {
+                case 1:
+                    playerMonster.attack(opponentMonster);
+                    appendText("Player's Monster: " + playerMonster.getName() + " (HP: " + playerMonster.getHp() + "/" + playerMonster.getHpMax() + ")");
+                    break;
+                case 2:
+                    playerMonster.defend();
+                    appendText("Player's Monster: " + playerMonster.getName() + " is defending.");
+                    break;
+                case 3:
+                    useSkill();
+                    break;
+                default:
+                    appendText("Invalid Selection. Try again.");
+                    break;
+            }
+        } catch (NumberFormatException e) {
+            appendText("Invalid input. Please enter a valid number.");
+        }
+    }
+
+
+
+    private void appendText(String text) {
+        Platform.runLater(() -> console.appendText(text + "\n"));
     }
 }
+
